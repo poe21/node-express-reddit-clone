@@ -36,6 +36,70 @@ var connection = mysql.createConnection({
 var reddit = require('./reddit');
 var redditAPI = reddit(connection);
 
+// Sorted homepage
+app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, new, controversial
+  var sort = request.params.sort;
+  if (sort === "top" || sort === "hot" || sort === "new" || sort === "" || sort === "controversial") {
+    redditAPI.getSortedHomepage(sort, function(err, posts) {
+      if (err) {
+        response.status(500).send('oops try again later!');
+      } 
+      else {
+        var allPosts = posts.map(function(post) {
+          return `
+            <li class="content-item">
+              <h3 class="content-item__title">
+                <a href="${post.url}">${post.title}</a>
+              </h3>
+              <p>Created by ${post.user.username}</p>
+              <h4><b>Votes: ${post.totalVotes}</b></h4>
+            <form action="/vote" method="post">
+              <input type="hidden" name="vote" value="1">
+              <input type="hidden" name="postId" value="${post.postId}">
+              <button type="submit">upvote this</button>
+            </form>
+            <form action="/vote" method="post">
+              <input type="hidden" name="vote" value="-1">
+              <input type="hidden" name="postId" value="${post.postId}">
+              <button type="submit">downvote this</button>
+            </form>
+            </li>`;
+        });
+        if (!request.loggedInUser) {
+          response.send(`
+            <h1>REDDIT</h1>
+            <nav><a href="/signup">Sign Up</a> | <a href="/login">Log in</a></nav>
+            <div id="contents">
+              <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
+              <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
+              <h2>List of contents</h2>
+              <ul class="contents-list">
+                ${allPosts.join('')}
+              </ul>
+            </div>
+          `);
+        } else {
+          response.send(`
+            <h1>REDDIT</h1>
+            <nav><a href="/createpost">Create post</a> | <a href="/logout">Log Out</a></nav>
+            <div id="contents">
+              <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
+              <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
+              <h2>List of contents</h2>
+              <ul class="contents-list">
+                ${allPosts.join('')}
+              </ul>
+            </div>
+          `);
+        }
+      }
+    });
+  } else {
+    response.status(400).send('Error: you have to choose a sorting method (top, hot, new or controversial)');
+  }
+});
+
+
 // homepage
 app.get('/', function (request, response) {
   redditAPI.getHomepage(function(err, posts) {
@@ -50,14 +114,15 @@ app.get('/', function (request, response) {
               <a href="${post.url}">${post.title}</a>
             </h3>
             <p>Created by ${post.user.username}</p>
+            <h4><b>Votes: ${post.totalVotes}</b></h4>
           <form action="/vote" method="post">
             <input type="hidden" name="vote" value="1">
-            <input type="hidden" name="postId" value="${post.id}">
+            <input type="hidden" name="postId" value="${post.postId}">
             <button type="submit">upvote this</button>
           </form>
           <form action="/vote" method="post">
             <input type="hidden" name="vote" value="-1">
-            <input type="hidden" name="postId" value="${post.id}">
+            <input type="hidden" name="postId" value="${post.postId}">
             <button type="submit">downvote this</button>
           </form>
           </li>`;
@@ -67,6 +132,8 @@ app.get('/', function (request, response) {
           <h1>REDDIT</h1>
           <nav><a href="/signup">Sign Up</a> | <a href="/login">Log in</a></nav>
           <div id="contents">
+            <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
+            <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
             <h2>List of contents</h2>
             <ul class="contents-list">
               ${allPosts.join('')}
@@ -78,6 +145,8 @@ app.get('/', function (request, response) {
           <h1>REDDIT</h1>
           <nav><a href="/createpost">Create post</a> | <a href="/logout">Log Out</a></nav>
           <div id="contents">
+            <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
+            <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
             <h2>List of contents</h2>
             <ul class="contents-list">
               ${allPosts.join('')}
@@ -140,8 +209,9 @@ app.get('/logout', function(request, response) {
       if (err) {
         response.status(500).send('Oops! An error occurred. Please try again later!');
       } else {
-        response.send(`You were successfully logged out.
-        <br><a href="/">Go back to homepage</a>`);
+        response.clearCookie('SESSION');
+        response.send(`<h1>REDDIT</h1> You were successfully logged out.
+        <br><br><a href="/">Go back to homepage</a>`);
       }
     });
   }
@@ -166,7 +236,6 @@ app.post('/createpost', function(request, response) {
         response.status(500).send('Oops! An error occurred. Please try again later!');
       } else {
         response.redirect('/');
-        //response.send("Your post was created!");
       }
     });
   }
@@ -174,13 +243,21 @@ app.post('/createpost', function(request, response) {
 
 // votes
 
-app.get('/votes', function(request, response) {
+app.post('/vote', function(request, response) {
   if (!request.loggedInUser) {
     response.status(401).send('You must be logged in to vote!');
   } else {
-    redditAPI.castVote(request.body.postId, request.body.vote, function(err, result) {
+    var vote = {
+      userId: request.loggedInUser.userId,
+      postId: request.body.postId,
+      vote: request.body.vote
+    };
+    console.log(vote);
+    redditAPI.castOrUpdateVote(vote, function(err, result) {
       if (err) {
-        response.status(500).send('Oops! An error occurred. Please try again later!');
+        response.status(500).send(`<h1>REDDIT</h1> 
+          Oops! An error occurred. Please try again later!
+          <br><br><a href='/'>Go back to homepage</a>`);
       } else {
         response.redirect('/');
       }
