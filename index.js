@@ -31,27 +31,44 @@ function createHead(request, content){
   if (!request.loggedInUser) {
     return `
       <head>
+        <title>RedditClone</title>
         <link rel="stylesheet" type="text/css" href="../css/main.css">
       </head>
-      <body>
+      <body class="overlay">
         <header>
           <a href='/'><img src="http://images.dailytech.com/nimage/Reddit_Logo_Wide.jpg"></a>
           <nav><a href="/signup">Sign Up</a> | <a href="/login">Log in</a></nav>
         </header>
-        ${content}
+        <main>
+          <section>
+            ${content}
+          </section>
+        </main>
+        <footer>
+          <p>&copy; RedditClone 2016</p>
+        </footer>
       </body>
     `;
   } else {
     return `
       <head>
+        <title>RedditClone</title>
         <link rel="stylesheet" type="text/css" href="../css/main.css">
       </head>
-      <body>
+      <body class="overlay">
         <header>
           <a href='/'><img src="http://images.dailytech.com/nimage/Reddit_Logo_Wide.jpg"></a>
-          <nav><a href="/createpost">Create post</a> | <a href="/logout">Log Out</a></nav>
+          <nav><a href="/">My account</a> | <a href="/logout">Log Out</a></nav>
         </header>
-        ${content}
+        <main>
+          <section>
+            <button><a href="/createpost">Create post</a></button>
+            ${content}
+          </section>
+        </main>
+        <footer>
+          <p>&copy; RedditClone 2016</p>
+        </footer>
       </body>
     `;
   }
@@ -117,8 +134,8 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
         if (!request.loggedInUser) {
           response.send(createHead(request, `
             <div id="contents">
-              <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
-              <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
+              <h3>SORT BY:</h3> <p><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
+              <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></p>
               <h2>List of contents</h2>
               <ul class="contents-list">
                 ${allPosts.join('')}
@@ -128,8 +145,8 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
         } else {
           response.send(createHead(request, `
             <div id="contents">
-              <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
-              <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
+              <h3>SORT BY:</h3> <p><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
+              <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></p>
               <h2>List of contents</h2>
               <ul class="contents-list">
                 ${allPosts.join('')}
@@ -175,8 +192,8 @@ app.get('/', function (request, response) {
       if (!request.loggedInUser) {
         response.send(createHead(request, `
           <div id="contents">
-            <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
-            <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
+            <h3>SORT BY:</h3> <p><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
+            <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></p>
             <h2>List of contents</h2>
             <ul class="contents-list">
               ${allPosts.join('')}
@@ -186,8 +203,8 @@ app.get('/', function (request, response) {
       } else {
         response.send(createHead(request, `
           <div id="contents">
-            <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
-            <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
+            <h3>SORT BY:</h3> <p><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
+            <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></p>
             <h2>List of contents</h2>
             <ul class="contents-list">
               ${allPosts.join('')}
@@ -310,7 +327,6 @@ app.post('/vote', function(request, response) {
       postId: request.body.postId,
       vote: request.body.vote
     };
-    console.log(vote);
     redditAPI.castOrUpdateVote(vote, function(err, result) {
       if (err) {
         response.status(500).send(createHead(request, `

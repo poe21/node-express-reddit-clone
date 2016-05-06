@@ -1,0 +1,86 @@
+html {
+  background: url('http://apexassisting.com/wp-content/uploads/2013/11/blue-hexagons-seamless-pattern-2488.png') repeat fixed;
+  height: 100%;
+}
+
+header {
+  background-color: #cfe4f9;
+  width: 100%;
+  border-bottom: 10px solid #559adb;
+  nav {
+    float: right;
+    text-align: right;
+    background-color: #559adb;
+    color: #fff;
+    padding: 14px;
+    font-size: 15px;
+    border-bottom-left-radius: 5px;
+    a {
+      color: #fff;
+    }
+  }
+  img {
+    height: 150px;
+    margin: 10px 0 10px 30px;
+  }
+}
+
+body {
+  font-family: Verdana, sans-serif;
+  width: 100%;
+  margin: 0;
+  z-index: 1;
+  position: absolute;
+  background-color: rgba(239,247,255, 0.7);
+  
+}
+
+section {
+  margin: 0 auto 0 auto;
+  background-color: #cfe4f9;
+  padding: 20px 30px 20px 30px;
+  width: 75%;
+}
+
+footer {
+  height: 50px;
+  background-color: #559ADB;
+  margin: 0;
+}
+
+a {
+  text-decoration: none;
+  color: #2b7ac4;
+}
+
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+ul {
+  padding: 0;
+  list-style-type: none;
+  width: 100%;
+  margin: 0 auto 0 auto;
+  
+  li {
+    background-color: #f7faff;
+    padding: 20px;
+    border-radius: 5px;
+    margin: 0 15px 15px 0;
+    width: 250px;
+    height: 250px;
+    display: inline-block;
+  }
+}
+
+button {
+  background-color: #fff;
+  border: 2px solid #2b7ac4;
+  width: 100px;
+  height: 30px;
+  color: #2b7ac4;
+  border-radius: 5px;
+  display: inline-block;
+}

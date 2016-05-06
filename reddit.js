@@ -126,7 +126,7 @@ module.exports = function RedditAPI(conn) {
         callback = options;
         options = {};
       }
-      var limit = options.numPerPage || 25; // if options.numPerPage is "falsy" then use 25
+      var limit = options.numPerPage || 24; // if options.numPerPage is "falsy" then use 24
       var offset = (options.page || 0) * limit;
 
       conn.query(`
@@ -197,7 +197,7 @@ module.exports = function RedditAPI(conn) {
         callback = options;
         options = {};
       }
-      var limit = options.numPerPage || 25; // if options.numPerPage is "falsy" then use 25
+      var limit = options.numPerPage || 24;
       var offset = (options.page || 0) * limit;
       
       if (sort === "new") {
