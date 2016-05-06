@@ -10,11 +10,20 @@
     "express": "^4.13.4",
     "mysql": "^2.10.2",
     "nodemon": "^1.9.2",
+    "react": "^15.0.2",
+    "react-dom": "^15.0.2",
     "secure-random": "^1.1.1"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "babel-preset-react": "^6.5.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "babel": {
+    "presets": [
+      "react"
+    ]
   },
   "repository": {
     "type": "git",

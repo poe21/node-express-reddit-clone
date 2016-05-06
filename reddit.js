@@ -7,9 +7,9 @@ function createSessionToken() {
 }
 
 /* to do:
+- account page?
 - subreddits?
 - pages?
-- redirrect from create post if logged out
 - spinning picture
 - posts links?
 */
@@ -86,7 +86,6 @@ module.exports = function RedditAPI(conn) {
     getUserFromSession: function(cookie, callback) {
       conn.query(`SELECT * FROM sessions WHERE token=?`, [cookie], 
         function(err, result) {
-          console.log(result);
           if (result.length === 0) {
             callback(err);
           } else {
@@ -266,7 +265,6 @@ module.exports = function RedditAPI(conn) {
           LIMIT ? OFFSET ?
           `, [limit, offset],
           function(err, results) {
-            console.log(results);
             if (err) {
               callback(err);
             }

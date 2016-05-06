@@ -1,15 +1,61 @@
-// modules
+// modules and imports
 var mysql = require('mysql');
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var path = require('path');
 var express = require('express');
 var app = express();
+var forms = require('./forms');
+var React = require('react');
+var render = require('react-dom/server').renderToStaticMarkup;
+
+// create a connection to our Cloud9 server
+var connection = mysql.createConnection({
+  host     : 'localhost',
+  user     : 'poe211',
+  password : '',
+  database: 'reddit'
+});
+
+// load our API and pass it the connection
+var reddit = require('./reddit');
+var redditAPI = reddit(connection);
 
 // middlewares
 app.use(bodyParser());
 app.use(cookieParser());
 app.use(checkLoginToken);
+app.use(express.static('public'));
+
+function createHead(request, content){
+  if (!request.loggedInUser) {
+    return `
+      <head>
+        <link rel="stylesheet" type="text/css" href="../css/main.css">
+      </head>
+      <body>
+        <header>
+          <a href='/'><img src="http://images.dailytech.com/nimage/Reddit_Logo_Wide.jpg"></a>
+          <nav><a href="/signup">Sign Up</a> | <a href="/login">Log in</a></nav>
+        </header>
+        ${content}
+      </body>
+    `;
+  } else {
+    return `
+      <head>
+        <link rel="stylesheet" type="text/css" href="../css/main.css">
+      </head>
+      <body>
+        <header>
+          <a href='/'><img src="http://images.dailytech.com/nimage/Reddit_Logo_Wide.jpg"></a>
+          <nav><a href="/createpost">Create post</a> | <a href="/logout">Log Out</a></nav>
+        </header>
+        ${content}
+      </body>
+    `;
+  }
+}
 
 function checkLoginToken(request, response, next) {
   if (request.cookies.SESSION) {
@@ -24,17 +70,20 @@ function checkLoginToken(request, response, next) {
   }
 }
 
-// create a connection to our Cloud9 server
-var connection = mysql.createConnection({
-  host     : 'localhost',
-  user     : 'poe211',
-  password : '',
-  database: 'reddit'
-});
+// test 
 
-// load our API and pass it the connection
-var reddit = require('./reddit');
-var redditAPI = reddit(connection);
+app.get('/test', function(request, response) {
+  redditAPI.getHomepage(function(err, posts) {
+    if (err) {
+      response.status(500).send('try again later!');
+    }
+    else {
+      var htmlStructure = ({posts: posts}); // calling the function that "returns JSX"
+      var html = render(htmlStructure); // rendering the JSX "structure" to HTML
+      response.send(html);
+    }
+  });
+});
 
 // Sorted homepage
 app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, new, controversial
@@ -66,9 +115,7 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
             </li>`;
         });
         if (!request.loggedInUser) {
-          response.send(`
-            <h1>REDDIT</h1>
-            <nav><a href="/signup">Sign Up</a> | <a href="/login">Log in</a></nav>
+          response.send(createHead(request, `
             <div id="contents">
               <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
               <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
@@ -77,11 +124,9 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
                 ${allPosts.join('')}
               </ul>
             </div>
-          `);
+          `));
         } else {
-          response.send(`
-            <h1>REDDIT</h1>
-            <nav><a href="/createpost">Create post</a> | <a href="/logout">Log Out</a></nav>
+          response.send(createHead(request, `
             <div id="contents">
               <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
               <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
@@ -90,7 +135,7 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
                 ${allPosts.join('')}
               </ul>
             </div>
-          `);
+          `));
         }
       }
     });
@@ -128,9 +173,7 @@ app.get('/', function (request, response) {
           </li>`;
       });
       if (!request.loggedInUser) {
-        response.send(`
-          <h1>REDDIT</h1>
-          <nav><a href="/signup">Sign Up</a> | <a href="/login">Log in</a></nav>
+        response.send(createHead(request, `
           <div id="contents">
             <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
             <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
@@ -139,11 +182,9 @@ app.get('/', function (request, response) {
               ${allPosts.join('')}
             </ul>
           </div>
-        `);
+        `));
       } else {
-        response.send(`
-          <h1>REDDIT</h1>
-          <nav><a href="/createpost">Create post</a> | <a href="/logout">Log Out</a></nav>
+        response.send(createHead(request, `
           <div id="contents">
             <h3>SORT BY:</h3> <nav><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
             <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></nav>
@@ -152,7 +193,7 @@ app.get('/', function (request, response) {
               ${allPosts.join('')}
             </ul>
           </div>
-        `);
+        `));
       }
     }
   });
@@ -160,7 +201,13 @@ app.get('/', function (request, response) {
 
 // sign up
 app.get('/signup', function(request, response) {
-  response.sendFile(path.join(__dirname + '/signup.html'));
+  forms.signup(function(err, result) {
+    if (err) {
+      response.send(err);
+    } else {
+      response.send(createHead(request, result));
+    }
+  });
 });
 
 app.post('/signup', function(request, response) {
@@ -179,7 +226,13 @@ app.post('/signup', function(request, response) {
 
 // login
 app.get('/login', function(request, response) {
-  response.sendFile(path.join(__dirname + '/login.html'));
+  forms.login(function(err, result) {
+    if (err) {
+      response.send(err);
+    } else {
+      response.send(createHead(request, result));
+    }
+  });
 });
 
 app.post('/login', function(request, response) {
@@ -203,15 +256,14 @@ app.post('/login', function(request, response) {
 
 app.get('/logout', function(request, response) {
   if (!request.loggedInUser) {
-    response.status(401).send('?!?....you must be logged in to log out.');
+    response.status(401).send(createHead(request, '<p>?!?....you must be logged in to log out.</p>'));
   } else {
     redditAPI.logOut(request.loggedInUser.userId, request.loggedInUser.token, function(err, result) {
       if (err) {
-        response.status(500).send('Oops! An error occurred. Please try again later!');
+        response.status(500).send(createHead(request,'Oops! An error occurred. Please try again later!'));
       } else {
         response.clearCookie('SESSION');
-        response.send(`<h1>REDDIT</h1> You were successfully logged out.
-        <br><br><a href="/">Go back to homepage</a>`);
+        response.send(createHead(request, `<p>You were successfully logged out.</p>`));
       }
     });
   }
@@ -219,12 +271,18 @@ app.get('/logout', function(request, response) {
 
 // Create post
 app.get('/createpost', function(request, response) {
-  response.sendFile(path.join(__dirname + '/createpost.html'));
+  forms.createPost(function(err, result) {
+    if (err) {
+      response.send(createHead(request, err));
+    } else {
+      response.send(createHead(request, result));
+    }
+  });
 });
 
 app.post('/createpost', function(request, response) {
   if (!request.loggedInUser) {
-    response.status(401).send('You must be logged in to create content!');
+    response.status(401).send(createHead(request, 'You must be logged in to create content!'));
   } else {
     var newPost = {
       title: request.body.title,
@@ -233,7 +291,7 @@ app.post('/createpost', function(request, response) {
     };
     redditAPI.createPost(newPost, function(err, post) {
       if (err) {
-        response.status(500).send('Oops! An error occurred. Please try again later!');
+        response.status(500).send(createHead(request, 'Oops! An error occurred. Please try again later!'));
       } else {
         response.redirect('/');
       }
@@ -245,7 +303,7 @@ app.post('/createpost', function(request, response) {
 
 app.post('/vote', function(request, response) {
   if (!request.loggedInUser) {
-    response.status(401).send('You must be logged in to vote!');
+    response.status(401).send(createHead(request, 'You must be logged in to vote!'));
   } else {
     var vote = {
       userId: request.loggedInUser.userId,
@@ -255,9 +313,8 @@ app.post('/vote', function(request, response) {
     console.log(vote);
     redditAPI.castOrUpdateVote(vote, function(err, result) {
       if (err) {
-        response.status(500).send(`<h1>REDDIT</h1> 
-          Oops! An error occurred. Please try again later!
-          <br><br><a href='/'>Go back to homepage</a>`);
+        response.status(500).send(createHead(request, `
+          Oops! An error occurred. Please try again later!`));
       } else {
         response.redirect('/');
       }
