@@ -40,8 +40,8 @@ function checkLoginToken(request, response, next) {
   }
 }
 
-var loggedOut = `<nav><a href="/signup">Sign Up</a><a href="/login">Log in</a></nav>`;
-var loggedIn = `<nav><a href="/">My account</a><a href="/logout">Log Out</a></nav>`;
+var loggedOut = `<nav class="userLogin"><a href="/signup">Sign Up</a><a href="/login">Log in</a></nav>`;
+var loggedIn = `<nav class="userLogin"><a href="/">My account</a><a href="/logout">Log Out</a></nav>`;
 
 function createHead(pageTitle, request, content){
   return `
@@ -53,16 +53,21 @@ function createHead(pageTitle, request, content){
         <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.4.0/css/font-awesome.min.css">
       </head>
       <body class="overlay">
-        <header>
-          <a href='/'><img src="http://images.dailytech.com/nimage/Reddit_Logo_Wide.jpg"></a>
-          ${request.loggedInUser ? loggedIn : loggedOut}
-        </header>
-        <main>
-          ${content}
-        </main>
-        <footer>
-          <p>&copy; RedditClone 2016</p>
-        </footer>
+        <div class="wrapper">
+          <header>
+            <a href='/'><img class="logo" src="http://images.dailytech.com/nimage/Reddit_Logo_Wide.jpg"></a>
+            ${request.loggedInUser ? loggedIn : loggedOut}
+          </header>
+          <main>
+            ${content}
+          </main>
+          <footer>
+            <p>RedditClone &copy; Annie 2016</p>
+          </footer>
+        </div>
+        
+        <script src="https://code.jquery.com/jquery-1.12.3.js"></script>
+        <script src="../js/main.js"></script>
       </body>
     </html>
   `;
@@ -80,34 +85,35 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
         var allPosts = posts.map(function(post) {
           return `
             <li class="content-item">
-              <h3 class="content-item__title">
-                <a href="${post.url}">${post.title}</a>
-              </h3>
-              <p>Created by ${post.user.username}</p>
-              <h4><b>Votes: ${post.totalVotes}</b></h4>
-            <form action="/vote" method="post">
-              <input type="hidden" name="vote" value="1">
-              <input type="hidden" name="postId" value="${post.postId}">
-              <button class="vote" type="submit"><i class="fa fa-caret-up" aria-hidden="true"></i></button>
-            </form>
-            <form action="/vote" method="post">
-              <input type="hidden" name="vote" value="-1">
-              <input type="hidden" name="postId" value="${post.postId}">
-              <button class="vote" type="submit"><i class="fa fa-caret-down" aria-hidden="true"></i></button>
-            </form>
+              <div class="postInfo">
+                <h3 class="content-item__title">
+                  <a href="${post.url}">${post.title}</a>
+                </h3>
+                <p>Created by ${post.user.username}</p>
+              </div>
+              <div class="votes">
+                <p class="voteScore${post.postId}">Votes: ${post.totalVotes}</p>
+                <form class="voteForm arrowUp" action="/vote" method="post">
+                  <input type="hidden" name="vote" value="1">
+                  <input type="hidden" name="postId" value="${post.postId}">
+                  <button class="vote" type="submit"><i class="fa fa-caret-up" aria-hidden="true"></i></button>
+                </form>
+                <form class="voteForm arrowDown" action="/vote" method="post">
+                  <input type="hidden" name="vote" value="-1">
+                  <input type="hidden" name="postId" value="${post.postId}">
+                  <button class="vote" type="submit"><i class="fa fa-caret-down" aria-hidden="true"></i></button>
+                </form>
+              </div>
             </li>`;
         });
         response.send(createHead("Reddit Clone | Homepage", request, `
-          <div class="contents">
-            <div class="sort-nav">
-              <h3>SORT BY:</h3> <p><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
-              <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></p>
-              <h2>List of contents</h2>
-            </div>
-            <ul class="contents-list">
-              ${allPosts.join('')}
-            </ul>
+          <div class="sort-nav">
+            <h3>SORT BY:</h3> <a href="/sort/new">New</a><a href="/sort/hot">Hot</a><a href="/sort/top">Top</a><a href="/sort/controversial">Controversial</a>
+            <h2>List of contents</h2>
           </div>
+          <ul class="contents-list">
+            ${allPosts.join('')}
+          </ul>
         `));
       }
     });
@@ -124,36 +130,7 @@ app.get('/', function (request, response) {
       response.status(500).send('oops try again later!');
     } 
     else {
-      var allPosts = posts.map(function(post) {
-        return `
-          <li class="content-item">
-            <h3 class="content-item__title">
-              <a href="${post.url}">${post.title}</a>
-            </h3>
-            <p>Created by ${post.user.username}</p>
-            <h4><b>Votes: ${post.totalVotes}</b></h4>
-          <form action="/vote" method="post">
-            <input type="hidden" name="vote" value="1">
-            <input type="hidden" name="postId" value="${post.postId}">
-            <button class="vote" type="submit"><i class="fa fa-caret-up" aria-hidden="true"></i></button>
-          </form>
-          <form action="/vote" method="post">
-            <input type="hidden" name="vote" value="-1">
-            <input type="hidden" name="postId" value="${post.postId}">
-            <button class="vote" type="submit"><i class="fa fa-caret-down" aria-hidden="true"></i></button>
-          </form>
-          </li>`;
-      });
-      response.send(createHead("Reddit Clone | Homepage", request, `
-        <div class="contents">
-          <h3>SORT BY:</h3> <p><a href="/sort/new">New</a> ||  <a href="/sort/hot">Hot</a> ||  
-          <a href="/sort/top">Top</a> ||  <a href="/sort/controversial">Controversial</a></p>
-          <h2>List of contents</h2>
-          <ul class="contents-list">
-            ${allPosts.join('')}
-          </ul>
-        </div>
-      `));
+      response.redirect('/sort/hot');
     }
   });
 });
@@ -275,7 +252,9 @@ app.post('/vote', function(request, response) {
         response.status(500).send(createHead("Reddit Clone | Error", request, `
           Oops! An error occurred. Please try again later!`));
       } else {
-        response.redirect('/');
+        redditAPI.getVotesForPost(Number(vote.postId), function(err,res){
+          response.send(res);
+        });
       }
     });
   }

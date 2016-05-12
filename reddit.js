@@ -192,6 +192,18 @@ module.exports = function RedditAPI(conn) {
         }
       });
     },
+    getVotesForPost: function(postId, callback){
+      conn.query(
+      `SELECT SUM(IFNULL(v.vote,0)) AS voteScore FROM votes v JOIN posts p ON p.id=v.postId WHERE v.postId=?`, [postId],
+      function(err, result) {
+        if (err) {
+          callback(err);
+        }
+        else {
+          callback(null, result);
+        }
+      });
+    },
     getSortedHomepage: function(sort, options, callback) {
       if (!callback) {
         callback = options;
