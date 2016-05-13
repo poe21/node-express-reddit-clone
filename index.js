@@ -8,6 +8,7 @@ var app = express();
 var forms = require('./forms');
 var React = require('react');
 var render = require('react-dom/server').renderToStaticMarkup;
+var requestLib = require('request');
 
 // create a connection to our Cloud9 server
 var connection = mysql.createConnection({
@@ -43,7 +44,7 @@ function checkLoginToken(request, response, next) {
 var loggedOut = `<nav class="userLogin"><a href="/signup">Sign Up</a><a href="/login">Log in</a></nav>`;
 var loggedIn = `<nav class="userLogin"><a href="/">My account</a><a href="/logout">Log Out</a></nav>`;
 
-function createHead(pageTitle, request, content){
+function createHead(pageTitle, request, content) {
   return `
     <!DOCTYPE html>
     <html>
@@ -106,11 +107,25 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
               </div>
             </li>`;
         });
+        
+        var loggedIn = `
+          <div class="createPost">
+            <form class="createPostButton" action="/createPost" method="get">
+                <button type="submit">Create post</button>
+            </form>
+          </div>
+        `;
+        var loggedOut = ``;
+        
         response.send(createHead("Reddit Clone | Homepage", request, `
           <div class="sort-nav">
-            <h3>SORT BY:</h3> <a href="/sort/new">New</a><a href="/sort/hot">Hot</a><a href="/sort/top">Top</a><a href="/sort/controversial">Controversial</a>
-            <h2>List of contents</h2>
+            <div class="sort-by-menu">
+              <h3>SORT BY:</h3> 
+              <a href="/sort/new">New</a><a href="/sort/hot">Hot</a><a href="/sort/top">Top</a><a href="/sort/controversial">Controversial</a>
+            </div>
+            ${request.loggedInUser ? loggedIn : loggedOut}
           </div>
+          <h2>List of contents</h2>
           <ul class="contents-list">
             ${allPosts.join('')}
           </ul>
@@ -118,7 +133,7 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
       }
     });
   } else {
-    response.status(400).send('Error: you have to choose a sorting method (top, hot, new or controversial)');
+    response.status(400).send(createHead("Reddit Clone | Error", request, `<div class="content"><p>Error: you have to choose a sorting method (top, hot, new or controversial)</p></div>`));
   }
 });
 
@@ -127,7 +142,7 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
 app.get('/', function (request, response) {
   redditAPI.getHomepage(function(err, posts) {
     if (err) {
-      response.status(500).send('oops try again later!');
+      response.status(500).send(createHead("Reddit Clone | Error", request, `<div class="content"><p>oops try again later!</p></div>`));
     } 
     else {
       response.redirect('/sort/hot');
@@ -174,11 +189,11 @@ app.get('/login', function(request, response) {
 app.post('/login', function(request, response) {
   redditAPI.checkLogin(request.body.username, request.body.password, function(err, user) {
       if (err) {
-        response.status(401).send(err.message + `<br><a href='/signup'>Sign up</a> | <a href='/login'>Log in</a>`);
+        response.status(401).send(createHead("Reddit Clone | Error", request, `<div class="content"><p>${err.message}</p></div>`));
       } else {
         redditAPI.createSession(user.id, function(err, token) {
           if (err) {
-            response.status(500).send('Oops! An error occurred. Please try again later!');
+            response.status(500).send(createHead("Reddit Clone | Error", request, `<div class="content"><p>Oops! An error occurred. Please try again later!</p></div>`));
           } else {
             response.cookie('SESSION', token);
             response.redirect('/');
@@ -192,17 +207,38 @@ app.post('/login', function(request, response) {
 
 app.get('/logout', function(request, response) {
   if (!request.loggedInUser) {
-    response.status(401).send(createHead("Reddit Clone | Error", request, '<p>?!?....you must be logged in to log out.</p>'));
+    response.status(401).send(createHead("Reddit Clone | Error", request, `<div class="content"><p>?!?....you must be logged in to log out.</p></div>`));
   } else {
     redditAPI.logOut(request.loggedInUser.userId, request.loggedInUser.token, function(err, result) {
       if (err) {
-        response.status(500).send(createHead("Reddit Clone | Error", request,'Oops! An error occurred. Please try again later!'));
+        response.status(500).send(createHead("Reddit Clone | Error", request,`<div class="content">Oops! An error occurred. Please try again later!</div>`));
       } else {
         response.clearCookie('SESSION');
-        response.send(createHead("Reddit Clone | Log Out", request, `<p>You were successfully logged out.</p>`));
+        response.send(createHead("Reddit Clone | Log Out", request, `<div class="content"><p>You were successfully logged out.</p></div>`));
       }
     });
   }
+});
+
+// Get title
+app.get('/getTitle', function(request, response) {
+  var url = request.query.url.toLowerCase();
+  if (url.indexOf('http://') === -1) {                // if the user doesn't enter http:// or http://www , it gets added to the url before searching
+    url = 'http://' + url;
+  } 
+  else if (url.indexOf('www.') === -1) {
+    url = 'http://www.' + url;
+  }
+  
+  requestLib(url, function(err, result) {
+    if (err) {
+      response.send('');
+    } else {
+      var html = result.body;
+      var title = redditAPI.findTitle(html);
+      response.send(title);
+    }
+ });
 });
 
 // Create post
@@ -210,16 +246,24 @@ app.get('/createpost', function(request, response) {
   forms.createPost(function(err, result) {
     if (err) {
       response.status(500).send(createHead("Reddit Clone | Error", request, `
-          Oops! An error occurred. Please try again later!`));
+          <div class="content"><p>Oops! An error occurred. Please try again later!</p></div>`));
     } else {
       response.send(createHead("Reddit Clone | Create Post", request, result));
     }
   });
 });
 
+app.get('/checkLogin', function(request, response) {
+    if(request.loggedInUser){
+      response.send(request.loggedInUser)
+    } else {
+      response.send("no")
+    }
+})
+
 app.post('/createpost', function(request, response) {
   if (!request.loggedInUser) {
-    response.status(401).send(createHead("Reddit Clone | Error", request, 'You must be logged in to create content!'));
+    response.status(401).send(createHead("Reddit Clone | Error", request, `<div class="content"><p>You must be logged in to create content!</p></div>`));
   } else {
     var newPost = {
       title: request.body.title,
@@ -228,7 +272,7 @@ app.post('/createpost', function(request, response) {
     };
     redditAPI.createPost(newPost, function(err, post) {
       if (err) {
-        response.status(500).send(createHead("Reddit Clone | Error", request, 'Oops! An error occurred. Please try again later!'));
+        response.status(500).send(createHead("Reddit Clone | Error", request, `<div class="content"><p>Oops! An error occurred. Please try again later!</p></div>`));
       } else {
         response.redirect('/');
       }
@@ -240,7 +284,7 @@ app.post('/createpost', function(request, response) {
 
 app.post('/vote', function(request, response) {
   if (!request.loggedInUser) {
-    response.status(401).send(createHead("Reddit Clone | Error", request, 'You must be logged in to vote!'));
+    response.status(401).send(createHead("Reddit Clone | Error", request, `<div class="content"><p>You must be logged in to vote!</p></div>`));
   } else {
     var vote = {
       userId: request.loggedInUser.userId,
@@ -250,10 +294,14 @@ app.post('/vote', function(request, response) {
     redditAPI.castOrUpdateVote(vote, function(err, result) {
       if (err) {
         response.status(500).send(createHead("Reddit Clone | Error", request, `
-          Oops! An error occurred. Please try again later!`));
+          <div class="content"><p>Oops! An error occurred. Please try again later!</p></div>`));
       } else {
-        redditAPI.getVotesForPost(Number(vote.postId), function(err,res){
-          response.send(res);
+        redditAPI.getVotesForPost(Number(vote.postId), function(err,res) {
+          if (err) {
+            response.send(err);
+          } else {
+            response.send(res);
+          }
         });
       }
     });
