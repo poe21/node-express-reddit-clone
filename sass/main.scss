@@ -174,7 +174,7 @@ html {
           color: #559adb;
         }
         
-        button:hover {
+        button:not(.voteFail):hover {
           color: #1768b5;
         }
         
@@ -193,15 +193,28 @@ html {
               font-weight: bold;
               margin: 0 0 0.3em 0;
             }
-            
           }
           
           .votes {
+            position: relative;
             order: -1;
             width: 25%;
             margin-right: 2em;
             display: flex;
             flex-direction: column;
+            
+            .voteFail-popup {
+              position: absolute;
+              top: -4.8em;
+              left: -3.5em;
+              width: 150px;
+              padding: 1em;
+              background-color: #f04924;
+              color: #fff;
+              cursor: auto;
+              font-size: 40%;
+              border-radius: 10px;
+            }
             
             .arrowUp {
               order: 1;

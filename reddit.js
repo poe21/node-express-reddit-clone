@@ -204,6 +204,32 @@ module.exports = function RedditAPI(conn) {
         }
       });
     },
+    getVoteByUserForPost: function(userId, postId, callback){
+      conn.query(
+      `SELECT vote FROM votes WHERE postId=? AND userId=?`, [postId, userId],
+      function(err, result) {
+        if (err) {
+          callback(err);
+        }
+        else {
+          callback(null, result);
+        }
+      });
+    },
+    checkVotesByUser: function(userId, callback) {
+      conn.query(`SELECT postId, vote FROM votes WHERE userId=?`, [userId], function(err, postsArray) {
+        if (err) {
+          callback(err);
+        }
+        else {
+          callback(null, postsArray);
+        }
+      });
+    },
+    findTitle: function(html) {
+      var title = html.split('<title>')[1].split('</title>')[0];
+      return title;
+    },
     getSortedHomepage: function(sort, options, callback) {
       if (!callback) {
         callback = options;

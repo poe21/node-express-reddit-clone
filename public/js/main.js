@@ -36,17 +36,30 @@ $(document).ready(function() {
     );
   });
   
-
-  
   $.get("/checkLogin", function(result) {
-    if(result === "no") {
-      $('.fa-caret-up').on('click', 
+    
+    // vote error popup if user not logged in
+    if(result === "notLogged") {
+      $('.vote').on('click', 
       function(){
-        $('.voteFail').remove();
-        $(this).prepend("<div class='voteFail'>You have to log in to vote.</div>");
+        $(this).prepend("<p class='voteFail-popup'>You have to be logged in to vote !</p>");
+        $('.voteFail-popup').fadeOut(2200);
+      });
+    }
+    
+    if (result) {
+      $.get("/checkVotes", function(votes) {
+        if (votes) {
+          var data = votes;
+          $.each(data, function(i){
+            if(data[i].vote === 1){
+              $("#upVote"+data[i].postId).css('color', '#1768b5');
+            } else if(data[i].vote === -1){
+              $("#downVote"+data[i].postId).css('color', 'red');
+            }
+          });
+        }
       });
     }
   });
-  
-  
 });

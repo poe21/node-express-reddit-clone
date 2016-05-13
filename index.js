@@ -26,6 +26,7 @@ var redditAPI = reddit(connection);
 app.use(bodyParser());
 app.use(cookieParser());
 app.use(checkLoginToken);
+app.use(checkVotes);
 app.use(express.static('public'));
 
 function checkLoginToken(request, response, next) {
@@ -33,6 +34,19 @@ function checkLoginToken(request, response, next) {
     redditAPI.getUserFromSession(request.cookies.SESSION, function(err, user) {
       if (user) {
         request.loggedInUser = user;
+      }
+      next();
+    });
+  } else {
+    next();
+  }
+}
+
+function checkVotes(request, response, next) {
+  if (request.loggedInUser) {
+    redditAPI.checkVotesByUser(request.loggedInUser.userId, function(err, posts) {
+      if (posts) {
+        request.votesByLoggedInUser = posts;
       }
       next();
     });
@@ -97,12 +111,12 @@ app.get('/sort/:sort', function (request, response) {  // choice of: top, hot, n
                 <form class="voteForm arrowUp" action="/vote" method="post">
                   <input type="hidden" name="vote" value="1">
                   <input type="hidden" name="postId" value="${post.postId}">
-                  <button class="vote" type="submit"><i class="fa fa-caret-up" aria-hidden="true"></i></button>
+                  <button id="${`upVote${post.postId}`}" class="vote" type="submit"><i class="fa fa-caret-up" aria-hidden="true"></i></button>
                 </form>
                 <form class="voteForm arrowDown" action="/vote" method="post">
                   <input type="hidden" name="vote" value="-1">
                   <input type="hidden" name="postId" value="${post.postId}">
-                  <button class="vote" type="submit"><i class="fa fa-caret-down" aria-hidden="true"></i></button>
+                  <button id="${`downVote${post.postId}`}" class="vote" type="submit"><i class="fa fa-caret-down" aria-hidden="true"></i></button>
                 </form>
               </div>
             </li>`;
@@ -254,12 +268,20 @@ app.get('/createpost', function(request, response) {
 });
 
 app.get('/checkLogin', function(request, response) {
-    if(request.loggedInUser){
-      response.send(request.loggedInUser)
-    } else {
-      response.send("no")
-    }
-})
+  if(request.loggedInUser){
+    response.send(request.loggedInUser);
+  } else {
+    response.send("notLogged");
+  }
+});
+
+app.get('/checkVotes', function(request, response) {
+  if(request.votesByLoggedInUser){
+    response.send(request.votesByLoggedInUser);
+  } else {
+    response.send("noVotes");
+  }
+});
 
 app.post('/createpost', function(request, response) {
   if (!request.loggedInUser) {
